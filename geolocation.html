@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <title>Geolocation API test</title>
+
+        <style>
+            html {
+                height: 100%
+            }
+
+            body {
+                height: 100%;
+                font: 14px sans-serif;
+            }
+
+            .layout {
+                max-width: 600px;
+                height: 100%;
+                overflow: hidden;
+                box-sizing: border-box;
+                margin: 0 auto;
+            }
+
+            .header {
+                margin: 0 0 10px;
+                padding: 0;
+                text-align: center;
+            }
+
+            .output {
+                height: 200px;
+                overflow: scroll;
+                margin: 20px 0;
+                font-family: monospace;
+                border: 1px inset #CCC;
+            }
+
+            .message {
+                margin-bottom: 5px;
+            }
+
+            .message::before {
+                content: '> ';
+            }
+
+            .get-position {
+                width: 100%;
+                height: 50px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="layout">
+            <h1 class="header">Геолокация</h1>
+
+            <div class="controls">
+                <button class="get-position">Определить позицию</button>
+            </div>
+            <div class="output"></div>
+        </div>
+
+        <script>
+            (function() {
+                var output = document.querySelector('.output');
+                var getPosButton = document.querySelector('.get-position');
+                var requestLock = false;
+
+                window.onerror = function(err) {
+                    print(err);
+                };
+
+                if (checkGeolocation()) {
+                    print('Геолокация поддерживается');
+                    getPosButton.addEventListener('click', requestPosition);
+                } else {
+                    print('Геолокация не поддерживается');
+                }
+
+                function checkGeolocation() {
+                    return 'geolocation' in navigator;
+                }
+
+                function requestPosition() {
+                    if (requestLock) return;
+
+                    requestLock = true;
+                    navigator.geolocation.getCurrentPosition(onSuccess, onError);
+                }
+
+                function onSuccess(position) {
+                    requestLock = false;
+
+                    var crd = position.coords;
+                    var pos = {
+                        lat: round(crd.latitude, 2),
+                        lon: round(crd.longitude, 2),
+                        acc: crd.accuracy
+                    };
+                    print('Получена позиция: ' + JSON.stringify(pos));
+                }
+
+                function onError(error) {
+                    requestLock = false;
+
+                    var data = {
+                        code: error.code,
+                        mess: error.message
+                    };
+                    print('Ошибка получения позиции: ' + JSON.stringify(data));
+                }
+
+                function print(str) {
+                    output.insertAdjacentHTML('beforeEnd', '<div class="message">' + str + '</div>');
+                }
+
+                function round(num, precision) {
+                    var k = Math.pow(10, precision);
+                    return Math.round(num * k) / k;
+                }
+            })();
+        </script>
+    </body>
+</html>
