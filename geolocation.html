@@ -202,8 +202,8 @@
 
                     var crd = position.coords;
                     var pos = {
-                        lat: round(crd.latitude, 2),
-                        lon: round(crd.longitude, 2),
+                        lat: crd.latitude,
+                        lon: crd.longitude,
                         acc: crd.accuracy
                     };
                     print('Получена позиция: ' + JSON.stringify(pos));
@@ -223,11 +223,6 @@
                 function print(str) {
                     output.insertAdjacentHTML('beforeEnd', '> ' + str + '\r\n');
                     output.scrollTop = output.clientHeight + output.scrollHeight;
-                }
-
-                function round(num, precision) {
-                    var k = Math.pow(10, precision);
-                    return Math.round(num * k) / k;
                 }
             })();
         </script>
