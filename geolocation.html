@@ -145,23 +145,11 @@
                     var output = e.currentTarget;
                     setTimeout(function() {
                         output.select();
-                        copySelection();
                     }, 0);
                 }
 
                 function clearSelection() {
                     window.getSelection().removeAllRanges();
-                }
-
-                function copySelection() {
-                    var success;
-                    try {
-                        success = document.execCommand('copy');
-                    } catch (e) {}
-
-                    if (success) {
-                        print('Результаты скопированы в буфер обмена')
-                    }
                 }
 
                 function requestPosition() {
