@@ -2,41 +2,77 @@
 <html lang="ru">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
         <title>Geolocation API test</title>
 
         <style>
             body {
-                font: 14px sans-serif;
+                font: 12px sans-serif;
             }
 
             .layout {
                 max-width: 600px;
                 height: 100%;
-                overflow: hidden;
                 box-sizing: border-box;
+                overflow: hidden;
+
                 margin: 0 auto;
             }
 
-            .header {
-                margin: 0 0 10px;
-                padding: 0;
-                text-align: center;
+            .controls {
+                margin-bottom: 10px;
+            }
+
+            .params {
+                font-size: 10px;
+
+                border-collapse: collapse;
+            }
+
+            @media (orientation: landscape) {
+                .params {
+                    font-size: 12px;
+                }
+            }
+
+            .params td {
+                padding: 0 5px 0;
+            }
+
+            .params td:last-child {
+                padding-right: 0;
+            }
+
+            .param[type=number] {
+                width: 27px;
+                box-sizing: border-box;
+
+                padding: 0 1px;
+
+                font-size: 10px;
+            }
+
+            @media (orientation: landscape) {
+                .param[type=number] {
+                    width: 50px;
+
+                    padding: 2px;
+                }
+            }
+
+            .label {
+                margin-left: 2px;
             }
 
             .output {
-                height: 200px;
+                width: 100%;
+                height: 180px;
+                box-sizing: border-box;
                 overflow: scroll;
-                margin: 20px 0;
+
                 font-family: monospace;
-                border: 1px inset #CCC;
-            }
-
-            .message {
-                margin-bottom: 5px;
-            }
-
-            .message::before {
-                content: '> ';
+                line-height: 22px;
             }
 
             .get-position {
@@ -47,24 +83,52 @@
     </head>
     <body>
         <div class="layout">
-            <h1 class="header">Геолокация</h1>
-
             <div class="controls">
                 <button class="get-position">Определить позицию</button>
             </div>
-            <div class="output"></div>
+            <table class="controls params">
+                <tr>
+                    <td>
+                        <input class="param" type="checkbox" id="enableHighAccuracy">
+                        <label class="label" for="enableHighAccuracy">enableHighAccuracy</label>
+                    </td>
+                    <td>
+                        <input class="param" type="number" id="timeout" placeholder="∞">
+                        <label class="label" for="timeout">timeout</label>
+                    </td>
+                    <td>
+                        <input class="param" type="number" id="maximumAge" placeholder="∞">
+                        <label class="label" for="maximumAge">maximumAge</label>
+                    </td>
+                </tr>
+            </table>
+            <textarea class="output" wrap="off" readonly></textarea>
         </div>
 
         <script>
             (function() {
-                var output = document.querySelector('.output');
+                // DOM
                 var getPosButton = document.querySelector('.get-position');
-                var requestLock = false;
+                var output = document.querySelector('.output');
 
+                var optionsNames = ['enableHighAccuracy', 'timeout', 'maximumAge'];
+                var optionsForm = optionsNames.reduce(function(res, name) {
+                    res[name] = document.getElementById(name);
+                    return res;
+                }, {});
+
+                // Общая инициализация
                 window.onerror = function(err) {
                     print(err);
                 };
 
+                output.addEventListener('focus', selectOutput);
+                output.addEventListener('blur', clearSelection);
+
+                // Вывод UA
+                print('UA: ' + navigator.userAgent);
+
+                // Инициализация Geo
                 if (checkGeolocation()) {
                     print('Геолокация поддерживается');
                     getPosButton.addEventListener('click', requestPosition);
@@ -72,19 +136,81 @@
                     print('Геолокация не поддерживается');
                 }
 
+                // Функции
                 function checkGeolocation() {
                     return 'geolocation' in navigator;
                 }
 
-                function requestPosition() {
-                    if (requestLock) return;
+                function selectOutput(e) {
+                    var output = e.currentTarget;
+                    setTimeout(function() {
+                        output.select();
+                        copySelection();
+                    }, 0);
+                }
 
-                    requestLock = true;
-                    navigator.geolocation.getCurrentPosition(onSuccess, onError);
+                function clearSelection() {
+                    window.getSelection().removeAllRanges();
+                }
+
+                function copySelection() {
+                    var success;
+                    try {
+                        success = document.execCommand('copy');
+                    } catch (e) {}
+
+                    if (success) {
+                        print('Результаты скопированы в буфер обмена')
+                    }
+                }
+
+                function requestPosition() {
+                    if (getPosButton.disabled) return;
+
+                    var options = getRequestOptions();
+                    logRequestStart(options);
+
+                    getPosButton.disabled = true;
+                    navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
+                }
+
+                function logRequestStart(options) {
+                    var message = 'Запрос геолокации. ';
+
+                    if (Object.keys(options).length) {
+                        message += 'Опции: ' + JSON.stringify(options) + '. ';
+                    }
+
+                    message += 'Timestamp: ' + new Date().getTime();
+                    print(message);
+                }
+
+                function logRequestEnd(timestamp) {
+                    print('Окончание запроса. Timestamp: ' + timestamp);
+                }
+
+                function getRequestOptions() {
+                    return optionsNames.reduce(function(res, name) {
+                        var elem = optionsForm[name];
+                        switch (elem.type) {
+                            case 'checkbox':
+                                if (elem.checked) {
+                                    res[name] = true;
+                                }
+                                break;
+                            case 'number':
+                                if (elem.value) {
+                                    res[name] = parseInt(elem.value, 10);
+                                }
+                                break;
+                        }
+                        return res;
+                    }, {});
                 }
 
                 function onSuccess(position) {
-                    requestLock = false;
+                    logRequestEnd(position.timestamp);
+                    getPosButton.disabled = false;
 
                     var crd = position.coords;
                     var pos = {
@@ -96,7 +222,8 @@
                 }
 
                 function onError(error) {
-                    requestLock = false;
+                    logRequestEnd(new Date().getTime());
+                    getPosButton.disabled = false;
 
                     var data = {
                         code: error.code,
@@ -106,7 +233,8 @@
                 }
 
                 function print(str) {
-                    output.insertAdjacentHTML('beforeEnd', '<div class="message">' + str + '</div>');
+                    output.insertAdjacentHTML('beforeEnd', '> ' + str + '\r\n');
+                    output.scrollTop = output.clientHeight + output.scrollHeight;
                 }
 
                 function round(num, precision) {
